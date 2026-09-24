@@ -1,0 +1,40 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Syntax
+        run: for f in checks/*.mjs; do node --check "$f"; done
+
+      # Both checkers must stay runnable and produce parseable output. They are
+      # report-only by design, so a zero exit proves nothing on its own; parsing
+      # the JSON is what proves they actually produced a result.
+      - name: check-ci-coverage produces valid JSON
+        run: |
+          node checks/check-ci-coverage.mjs . --json > /tmp/coverage.json
+          node -e "const j=require('/tmp/coverage.json'); if(!Array.isArray(j.repos)) throw new Error('no repos array'); console.log('ok: scanned', j.scanned)"
+
+      - name: check-amplitude runs and classifies
+        run: |
+          node checks/check-amplitude.mjs . | tee /tmp/amplitude.txt
+          grep -q "SKIP: no package.json" /tmp/amplitude.txt
+
+  # Runs the shared workflow against this repo. There is no pyproject.toml or
+  # package.json here, so every gate should report SKIP — which is exactly the
+  # path worth smoke-testing, since a broken SKIP branch would silently pass
+  # for every consumer whose stack is not detected.
+  self-invoke:
+    uses: ./.github/workflows/ci-baseline.yml

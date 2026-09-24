@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Keeps the SHA pins in ci-baseline.yml current. Callers pin this repo by SHA,
+  # so their own Dependabot handles the bump on their side.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci

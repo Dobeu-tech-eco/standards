@@ -1,0 +1,37 @@
+name: Portfolio CI coverage
+on:
+  schedule:
+    - cron: '0 13 * * 1'   # Mondays 13:00 UTC
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sweep:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      # Written to the run summary rather than an artifact so the table is
+      # readable without downloading anything. Report-only: this never fails
+      # the run, because coverage is a metric to watch, not a gate to enforce.
+      - name: Sweep the org
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo '## Portfolio CI coverage'
+            echo
+            echo 'Which repos gate test / lint / typecheck / build in CI, and which call the shared baseline.'
+            echo
+            echo '```'
+            node checks/check-ci-coverage.mjs --org "${GITHUB_REPOSITORY_OWNER}"
+            echo '```'
+            echo
+            echo '_Org mode reads workflow files only, so a repo whose gates hide behind a package.json'
+            echo 'script may under-report. Local clones that were never pushed do not appear at all._'
+          } >> "$GITHUB_STEP_SUMMARY"
