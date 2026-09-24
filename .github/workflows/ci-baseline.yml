@@ -13,10 +13,12 @@
 #       uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@<40-char-sha>  # v1
 #
 # Pin the full commit SHA, not @v1 or @main — both are mutable. `v1` is a label for
-# finding the current blessed commit: git ls-remote <repo> v1.
+# finding the current blessed commit:
 #
-# NOT YET CALLABLE: this file must live in a repo published to GitHub before any
-# `uses:` reference resolves. See the rollout notes reported alongside this file.
+#   git ls-remote https://github.com/Dobeu-tech-eco/standards 'v1^{}'
+#
+# The `^{}` matters. Without it you get the annotated tag object, which is also
+# 40 hex characters but is not a commit and will not resolve at runtime.
 #
 # CodeQL here is a FALLBACK, not the recommended route. Prefer GitHub's code
 # scanning DEFAULT SETUP: it needs no workflow file, no permissions block, and
