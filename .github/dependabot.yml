@@ -1,12 +1,29 @@
 version: 2
 updates:
-  # Keeps the SHA pins in ci-baseline.yml current. Callers pin this repo by SHA,
-  # so their own Dependabot handles the bump on their side.
+  # Keeps this repo's own SHA pins current. Callers pin standards by SHA and run
+  # their own Dependabot, so their side is handled there.
+  #
+  # Grouped and monthly on purpose. Ungrouped weekly produced one PR per action,
+  # which does not scale once many repos carry this config: the review cost grows
+  # with repos x actions rather than with actual risk. Minor and patch batch into
+  # a single PR because they are routine; majors batch separately because they
+  # deserve to be read.
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
+      interval: monthly
+    groups:
+      actions-minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      actions-major:
+        patterns:
+          - '*'
+        update-types:
+          - major
+    open-pull-requests-limit: 2
     commit-message:
       prefix: ci
