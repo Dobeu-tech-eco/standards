@@ -1,0 +1,8 @@
+# Key tables and anything else local-only. Keeps this repo publishable.
+*.local.md
+.env*
+node_modules/
+
+# Internal working notes — not part of the published standard.
+plans/
+research/
