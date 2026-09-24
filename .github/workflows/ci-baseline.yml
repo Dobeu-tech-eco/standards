@@ -17,6 +17,23 @@
 #
 # NOT YET CALLABLE: this file must live in a repo published to GitHub before any
 # `uses:` reference resolves. See the rollout notes reported alongside this file.
+#
+# CodeQL is OPT-IN (`enable-codeql: true`) because it cannot be turned on for
+# everyone from here. A caller that enables it MUST also widen its own
+# permissions block — the codeql job deliberately declares none, so it inherits
+# the caller's token:
+#
+#   permissions:
+#     contents: read
+#     security-events: write   # required to upload the SARIF results
+#     actions: read            # additionally required on a private repo
+#
+# and must have code scanning DEFAULT SETUP turned off for that repo. GitHub
+# rejects uploads from an advanced configuration while default setup is enabled
+# ("CodeQL analyses from advanced configurations cannot be processed...").
+# Leaving `enable-codeql` at its default skips the job entirely and asks for no
+# extra permission, so existing callers declaring only `contents: read` are
+# unaffected.
 name: CI Baseline
 on:
   workflow_call:
@@ -48,17 +65,30 @@ on:
         description: 'true fails the build on an Amplitude policy violation; false reports only.'
         type: boolean
         default: false
+      enable-codeql:
+        description: >-
+          true runs a CodeQL scan. Requires security-events: write in the
+          CALLER's permissions block and code scanning default setup disabled.
+        type: boolean
+        default: false
+      codeql-languages:
+        description: >-
+          Comma-separated CodeQL languages (e.g. javascript-typescript,python).
+          Empty derives them from the detected stack; a stack with no CodeQL
+          language skips the scan.
+        type: string
+        default: ''
       standards-repo:
         type: string
         default: Dobeu-tech-eco/standards
       standards-ref:
         type: string
         default: main
-permissions:
-  contents: read
 jobs:
   baseline:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
     steps:
@@ -204,3 +234,58 @@ jobs:
       - name: Amplitude instrumentation policy
         continue-on-error: ${{ !inputs.enforce-amplitude }}
         run: node .standards/checks/check-amplitude.mjs .
+
+  # Opt-in security scan. Declares NO permissions block on purpose: a job in a
+  # called workflow that requests nothing inherits the caller's token, so callers
+  # that never enable this are never asked for security-events: write. See the
+  # header for what a caller must grant before flipping enable-codeql.
+  codeql:
+    if: inputs.enable-codeql
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      # Same auto-detection as the baseline job, mapped onto CodeQL language
+      # ids. Resolving to an empty list is a normal outcome (a docs-only repo),
+      # not a failure — the remaining steps skip and say so.
+      - name: Resolve CodeQL languages
+        id: detect
+        env:
+          STACK_INPUT: ${{ inputs.stack }}
+          LANG_INPUT: ${{ inputs.codeql-languages }}
+        run: |
+          langs="$LANG_INPUT"
+          if [ -z "$langs" ]; then
+            stack="$STACK_INPUT"
+            if [ "$stack" = auto ]; then
+              has_py=false; has_node=false
+              if [ -f pyproject.toml ]; then has_py=true; fi
+              if [ -f package.json ]; then has_node=true; fi
+              if   $has_py && $has_node; then stack=both
+              elif $has_py;              then stack=python
+              elif $has_node;            then stack=node
+              else                            stack=none
+              fi
+            fi
+            case "$stack" in
+              node)   langs=javascript-typescript ;;
+              python) langs=python ;;
+              both)   langs=javascript-typescript,python ;;
+            esac
+          fi
+          echo "languages=$langs" >>"$GITHUB_OUTPUT"
+          if [ -z "$langs" ]; then
+            echo "SKIP codeql — no CodeQL language for the detected stack."
+          else
+            echo "CodeQL languages: $langs"
+          fi
+
+      - if: steps.detect.outputs.languages != ''
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        with:
+          languages: ${{ steps.detect.outputs.languages }}
+
+      - if: steps.detect.outputs.languages != ''
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4

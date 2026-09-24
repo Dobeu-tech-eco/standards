@@ -38,3 +38,16 @@ jobs:
   # for every consumer whose stack is not detected.
   self-invoke:
     uses: ./.github/workflows/ci-baseline.yml
+
+  # Exercises the OTHER path: enable-codeql on, with an explicit language
+  # because auto-detection finds no stack here. This is the only place the
+  # enabled branch is proven, and it doubles as the worked example of the
+  # permissions a caller must grant.
+  self-invoke-codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/ci-baseline.yml
+    with:
+      enable-codeql: true
+      codeql-languages: javascript-typescript
