@@ -13,6 +13,7 @@
 | `.env.example` | complete env contract | every var the code reads, placeholder values only — **empty .env.example = violation** |
 | `SECURITY.md` | security posture | audit cadence, dependabot SLA (merge ≤7 days), disclosure contact |
 | `CHANGELOG.md` | releases | keep-a-changelog format; release commits update it |
+| `.github/dependabot.yml` | dependency updates | github-actions ecosystem at minimum; grouped and monthly per the config below |
 
 ## README skeleton (standard)
 
@@ -28,6 +29,41 @@ Production: <URL> · Vercel: <project> · Status: <active/maintenance>
 ## Analytics               (Amplitude verdict per _standards/amplitude-instrumentation-policy.md + link)
 ## Documentation           (links to docs/)
 ```
+
+## Dependabot config (canonical)
+
+Ungrouped weekly updates open one PR per action, so review load scales with
+repos x actions rather than with risk — measured at six PRs from one repo's
+first run, and grouping collapsed three PRs on `standards` into one. Group
+minor and patch together because they are routine; keep majors separate
+because they are worth reading.
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions-minor-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      actions-major:
+        patterns:
+          - '*'
+        update-types:
+          - major
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: ci
+```
+
+Add an ecosystem block per package manager the repo actually uses (`npm`,
+`uv`, `pip`) on the same grouped-monthly shape.
 
 ## Rules
 
