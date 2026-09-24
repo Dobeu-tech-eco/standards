@@ -30,8 +30,13 @@ permissions:
   contents: read
 jobs:
   baseline:
-    uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@v1
+    uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@<40-char-sha>  # v1
 ```
+
+Pin the **full commit SHA**, with the tag name as a trailing comment. A moving tag is a
+mutable reference: anyone with write access here could repoint every consumer's CI at once.
+Repos that enforce SHA pinning (si-agent-core does, via a test) will reject a tag ref
+outright. Get the SHA with `git ls-remote https://github.com/Dobeu-tech-eco/standards v1`.
 
 The workflow detects the stack from `pyproject.toml` / `package.json` and the package manager
 from the lockfile. Override any gate when detection is wrong:
@@ -60,9 +65,13 @@ node checks/check-amplitude.mjs ../<repo>        # Amplitude policy for one repo
 
 ## Versioning
 
-Callers pin `@v1`, a moving tag. Never publish a caller stub pinned to `@main` — every push here
-would reach every consumer with no staging step. Move `v1` only after the change is green on a
-pilot repo.
+Callers pin a **full commit SHA**. `v1` is a moving label for discovering the current blessed
+commit, not a pin target — resolve it to a SHA and pin that. Never pin `@main` or `@v1` directly:
+both are mutable, so a push here would reach every consumer with no staging step and no review.
+
+Move `v1` only after a change is green on a pilot repo. Consumers then bump their SHA
+deliberately, which is a reviewable diff (and Dependabot-automatable) rather than a silent
+portfolio-wide deploy.
 
 ## Deployment
 

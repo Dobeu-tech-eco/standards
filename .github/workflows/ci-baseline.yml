@@ -10,7 +10,10 @@
 #     contents: read
 #   jobs:
 #     baseline:
-#       uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@v1
+#       uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@<40-char-sha>  # v1
+#
+# Pin the full commit SHA, not @v1 or @main — both are mutable. `v1` is a label for
+# finding the current blessed commit: git ls-remote <repo> v1.
 #
 # NOT YET CALLABLE: this file must live in a repo published to GitHub before any
 # `uses:` reference resolves. See the rollout notes reported alongside this file.
