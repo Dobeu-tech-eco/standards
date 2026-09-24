@@ -62,7 +62,7 @@ jobs:
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -194,7 +194,7 @@ jobs:
       # so the fetch carries the same continue-on-error as the check itself.
       - name: Fetch standards checks
         continue-on-error: ${{ !inputs.enforce-amplitude }}
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ inputs.standards-repo }}
           ref: ${{ inputs.standards-ref }}
