@@ -70,17 +70,27 @@ node checks/check-amplitude.mjs ../<repo>        # Amplitude policy for one repo
 
 ## Versioning
 
-Callers pin a **full commit SHA**. `v1` is a moving label for discovering the current blessed
-commit, not a pin target — resolve it to a SHA and pin that. Never pin `@main` or `@v1` directly:
-both are mutable, so a push here would reach every consumer with no staging step and no review.
+Callers pin a **full commit SHA**, with a tag name as a trailing comment. Never pin `@main`
+directly — a push here would reach every consumer with no staging step and no review.
 
-Move `v1` only after a change is green on a pilot repo. Consumers then bump their SHA
-deliberately, which is a reviewable diff (and Dependabot-automatable) rather than a silent
-portfolio-wide deploy.
+Tags are immutable once released and **do not move**: publishing a GitHub Release on a tag
+locks it against force-updates (confirmed the hard way — `git push -f origin v1` was rejected
+server-side with `GH013 ... Cannot update this protected ref` after `v1`'s Release existed).
+A change to this workflow ships as a **new tag** — `v1.1`, `v1.2`, and so on — never by moving
+an existing one. Resolve the tag you want to a commit with:
+
+```
+git ls-remote https://github.com/Dobeu-tech-eco/standards 'v1.1^{}'
+```
+
+The `^{}` matters — without it you get the annotated tag object's hash, which is also 40 hex
+characters but is not a commit and will not resolve.
 
 ## Deployment
 
-Nothing deploys. Changes take effect for consumers when the `v1` tag moves.
+Nothing auto-deploys. A new tag has zero effect on existing callers until each one bumps its
+pinned SHA — a reviewable diff per repo (Dependabot-automatable for the `github-actions`
+ecosystem), never a silent portfolio-wide push.
 
 ## Analytics
 

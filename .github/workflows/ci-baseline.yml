@@ -10,12 +10,15 @@
 #     contents: read
 #   jobs:
 #     baseline:
-#       uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@<40-char-sha>  # v1
+#       uses: Dobeu-tech-eco/standards/.github/workflows/ci-baseline.yml@<40-char-sha>  # v1.1
 #
-# Pin the full commit SHA, not @v1 or @main — both are mutable. `v1` is a label for
-# finding the current blessed commit:
+# Pin the full commit SHA, not a bare tag or @main. Tags here are immutable once
+# released — GitHub locks a tag against force-updates once a Release exists on it
+# (confirmed: force-pushing v1 was rejected server-side, GH013, after its Release
+# was published) — so a change ships as a NEW tag (v1.1, v1.2, ...), never by
+# moving an old one. Resolve whichever tag you want to its commit:
 #
-#   git ls-remote https://github.com/Dobeu-tech-eco/standards 'v1^{}'
+#   git ls-remote https://github.com/Dobeu-tech-eco/standards 'v1.1^{}'
 #
 # The `^{}` matters. Without it you get the annotated tag object, which is also
 # 40 hex characters but is not a commit and will not resolve at runtime.
