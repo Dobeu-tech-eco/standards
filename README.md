@@ -36,7 +36,9 @@ jobs:
 Pin the **full commit SHA**, with the tag name as a trailing comment. A moving tag is a
 mutable reference: anyone with write access here could repoint every consumer's CI at once.
 Repos that enforce SHA pinning (si-agent-core does, via a test) will reject a tag ref
-outright. Get the SHA with `git ls-remote https://github.com/Dobeu-tech-eco/standards v1`.
+outright. Get the SHA with `git ls-remote https://github.com/Dobeu-tech-eco/standards 'v1^{}'` — note
+the `^{}`, which dereferences the annotated tag to its commit. Without it you get the tag
+object's hash, which is 40 hex characters but is not a commit and will not resolve.
 
 The workflow detects the stack from `pyproject.toml` / `package.json` and the package manager
 from the lockfile. Override any gate when detection is wrong:
