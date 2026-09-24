@@ -38,7 +38,6 @@
 #     security-events: write   # required to upload the SARIF results
 #     actions: read            # additionally required on a private repo
 #
-#
 # Leaving `enable-codeql` at its default skips the job entirely and asks for no
 # extra permission, so existing callers declaring only `contents: read` are
 # unaffected.
