@@ -106,6 +106,13 @@ on:
           step for why.
         type: string
         default: ''
+      build-cmd:
+        description: >-
+          Override the detected build command. node runs its package.json
+          "build" script; python|both have no default at all — see the Build
+          step for why.
+        type: string
+        default: ''
       enforce-amplitude:
         description: 'true fails the build on an Amplitude policy violation; false reports only.'
         type: boolean
