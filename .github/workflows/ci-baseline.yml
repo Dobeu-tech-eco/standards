@@ -18,19 +18,27 @@
 # NOT YET CALLABLE: this file must live in a repo published to GitHub before any
 # `uses:` reference resolves. See the rollout notes reported alongside this file.
 #
-# CodeQL is OPT-IN (`enable-codeql: true`) because it cannot be turned on for
-# everyone from here. A caller that enables it MUST also widen its own
-# permissions block — the codeql job deliberately declares none, so it inherits
-# the caller's token:
+# CodeQL here is a FALLBACK, not the recommended route. Prefer GitHub's code
+# scanning DEFAULT SETUP: it needs no workflow file, no permissions block, and
+# no action SHA to keep pinned, and it picks up languages on its own.
+# si-agent-core already runs that way (workflow
+# `dynamic/github-code-quality/codeql`, no file in .github/workflows).
+#
+# `enable-codeql: true` exists only for repos that CANNOT use default setup —
+# it is off by default, and a repo already on default setup must leave it off.
+# GitHub rejects uploads from an advanced configuration while default setup is
+# enabled ("CodeQL analyses from advanced configurations cannot be
+# processed..."), so turning this on there breaks a scan that already works.
+#
+# A caller that does enable it MUST also widen its own permissions block — the
+# codeql job deliberately declares none, so it inherits the caller's token:
 #
 #   permissions:
 #     contents: read
 #     security-events: write   # required to upload the SARIF results
 #     actions: read            # additionally required on a private repo
 #
-# and must have code scanning DEFAULT SETUP turned off for that repo. GitHub
-# rejects uploads from an advanced configuration while default setup is enabled
-# ("CodeQL analyses from advanced configurations cannot be processed...").
+#
 # Leaving `enable-codeql` at its default skips the job entirely and asks for no
 # extra permission, so existing callers declaring only `contents: read` are
 # unaffected.
@@ -67,8 +75,10 @@ on:
         default: false
       enable-codeql:
         description: >-
-          true runs a CodeQL scan. Requires security-events: write in the
-          CALLER's permissions block and code scanning default setup disabled.
+          Fallback scan for repos that cannot use GitHub's code scanning default
+          setup — prefer default setup. true requires security-events: write in
+          the CALLER's permissions block, and default setup disabled for that
+          repo.
         type: boolean
         default: false
       codeql-languages:
