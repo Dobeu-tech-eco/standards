@@ -41,9 +41,18 @@ function evaluate(name, workflowText, indirectText, workflowCount) {
   const code = stripComments(workflowText);
   const baseline = /uses:\s*\S*ci-baseline\.ya?ml/i.test(code);
   const haystack = code + indirectText;
+  // A baseline caller can be trusted for test/lint/typecheck unconditionally:
+  // ci-baseline.yml has a real default for each on every supported stack, so
+  // adopting it means the gate runs (or SKIPs with a visible line) regardless
+  // of what the repo looks like. Build is NOT like that — python|both has no
+  // default at all, and node only runs it if package.json declares a "build"
+  // script. Crediting `baseline` for build unconditionally overstates every
+  // caller that doesn't happen to have one, so build still needs its own
+  // evidence from the workflow/script text even when baseline is true.
   const row = { repo: name, workflows: workflowCount, baseline };
   for (const [gate, re] of Object.entries(GATES)) {
-    row[gate] = baseline || (workflowCount > 0 && re.test(haystack));
+    const trustBaseline = baseline && gate !== 'build';
+    row[gate] = trustBaseline || (workflowCount > 0 && re.test(haystack));
   }
   row.gates = ['test', 'lint', 'typecheck', 'build'].filter(g => row[g]).length;
   return row;
