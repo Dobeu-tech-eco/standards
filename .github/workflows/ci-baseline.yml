@@ -80,13 +80,23 @@ on:
         type: string
         default: '4.18.1'
       test-cmd:
-        description: 'Override the detected test command. Empty string skips the gate.'
+        description: >-
+          Override the detected test command. Empty string uses the stack
+          default (uv run pytest for python, the package.json "test" script
+          for node) and only SKIPs if that default doesn't exist either.
         type: string
         default: ''
       lint-cmd:
+        description: >-
+          Override the detected lint command. Same empty-string behavior as
+          test-cmd: falls back to the stack default, SKIPs only if none exists.
         type: string
         default: ''
       typecheck-cmd:
+        description: >-
+          Override the detected typecheck command. Same empty-string behavior
+          as test-cmd: falls back to the stack default, SKIPs only if none
+          exists.
         type: string
         default: ''
       build-cmd:
@@ -235,7 +245,12 @@ jobs:
             case "$STACK" in
               python|both) cmd='uv run pytest -q' ;;
               node)
-                if grep -q '"test"' package.json 2>/dev/null; then cmd="$PM test"; fi
+                if node -e '
+                  try {
+                    const s = JSON.parse(require("fs").readFileSync("package.json", "utf8")).scripts || {};
+                    process.exit(s.test ? 0 : 1);
+                  } catch { process.exit(1); }
+                ' 2>/dev/null; then cmd="$PM test"; fi
                 ;;
             esac
           fi
@@ -254,7 +269,12 @@ jobs:
             case "$STACK" in
               python|both) cmd='uv run ruff check . && uv run ruff format --check .' ;;
               node)
-                if grep -q '"lint"' package.json 2>/dev/null; then cmd="$PM run lint"; fi
+                if node -e '
+                  try {
+                    const s = JSON.parse(require("fs").readFileSync("package.json", "utf8")).scripts || {};
+                    process.exit(s.lint ? 0 : 1);
+                  } catch { process.exit(1); }
+                ' 2>/dev/null; then cmd="$PM run lint"; fi
                 ;;
             esac
           fi
@@ -275,7 +295,12 @@ jobs:
                 if [ -d src ]; then cmd='uv run mypy --strict src'; fi
                 ;;
               node)
-                if grep -qE '"(typecheck|type-check)"' package.json 2>/dev/null; then cmd="$PM run typecheck"; fi
+                if node -e '
+                  try {
+                    const s = JSON.parse(require("fs").readFileSync("package.json", "utf8")).scripts || {};
+                    process.exit((s.typecheck || s["type-check"]) ? 0 : 1);
+                  } catch { process.exit(1); }
+                ' 2>/dev/null; then cmd="$PM run typecheck"; fi
                 ;;
             esac
           fi
@@ -301,7 +326,12 @@ jobs:
             case "$STACK" in
               python|both) : ;;
               node)
-                if grep -q '"build"' package.json 2>/dev/null; then cmd="$PM run build"; fi
+                if node -e '
+                  try {
+                    const s = JSON.parse(require("fs").readFileSync("package.json", "utf8")).scripts || {};
+                    process.exit(s.build ? 0 : 1);
+                  } catch { process.exit(1); }
+                ' 2>/dev/null; then cmd="$PM run build"; fi
                 ;;
             esac
           fi

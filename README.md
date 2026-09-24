@@ -46,7 +46,9 @@ from the lockfile. Override any gate when detection is wrong:
 ```yaml
     with:
       test-cmd: ./gradlew test
-      typecheck-cmd: ''        # empty string skips the gate
+      typecheck-cmd: ''        # empty = use the stack default, not "skip"; there
+                                # is no real way to skip test/lint/typecheck — see
+                                # ci-baseline.yml's typecheck-cmd description
       build-cmd: uv build      # python/both have no build default; set one to gate it
       enforce-amplitude: true  # default false = report only
 ```
