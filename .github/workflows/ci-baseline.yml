@@ -60,6 +60,25 @@ on:
       uv-version:
         type: string
         default: '0.12.15'
+      # Pinned for the same reason uv is: corepack's own fallback floats, so an
+      # unpinned baseline installs a different package manager week to week even
+      # at a fixed workflow SHA. Overridable per caller; a repo that declares
+      # packageManager in package.json wins over both.
+      pnpm-version:
+        description: >-
+          pnpm used when package.json declares no packageManager. Held on the 10
+          line: pnpm 12 stopped reading the package.json "pnpm" field, so moving
+          a repo forward is a per-repo migration (overrides ->
+          pnpm-workspace.yaml), not a CI default.
+        type: string
+        default: '10.34.5'
+      yarn-version:
+        description: >-
+          yarn used when package.json declares no packageManager. Berry, because
+          the install below passes --immutable, which classic yarn 1.x does not
+          accept.
+        type: string
+        default: '4.18.1'
       test-cmd:
         description: 'Override the detected test command. Empty string skips the gate.'
         type: string
@@ -145,14 +164,42 @@ jobs:
           STACK: ${{ steps.detect.outputs.stack }}
           PM: ${{ steps.detect.outputs.pm }}
           UV_PIN: ${{ inputs.uv-version }}
+          PNPM_PIN: ${{ inputs.pnpm-version }}
+          YARN_PIN: ${{ inputs.yarn-version }}
         run: |
+          # `corepack enable` alone is NOT deterministic, however correct it looks.
+          # With no packageManager field, corepack installs its own latest
+          # known-good release: on dts-contract-engine that resolved to pnpm
+          # 12.6.0, which no longer reads the package.json "pnpm" field, so
+          # pnpm.overrides were silently dropped and --frozen-lockfile failed
+          # with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH. Nothing had changed in the
+          # repo or in this workflow. So: honor a declared packageManager (the
+          # repo's explicit choice), otherwise activate a pinned version.
+          # Do not "simplify" this back to a bare `corepack enable`.
           case "$STACK" in
             node|both)
-              if [ "$PM" = pnpm ]; then
+              if [ "$PM" = pnpm ] || [ "$PM" = yarn ]; then
                 corepack enable
+                declared=$(node -e '
+                  try {
+                    const p = JSON.parse(require("fs").readFileSync("package.json", "utf8"));
+                    const d = p.devEngines && p.devEngines.packageManager;
+                    const v = typeof p.packageManager === "string" ? p.packageManager
+                            : (d && typeof d.version === "string" ? d.name + "@" + d.version : "");
+                    process.stdout.write(v);
+                  } catch {}
+                ' 2>/dev/null || true)
+                if [ -n "$declared" ]; then
+                  echo "package.json declares $declared — corepack honors it."
+                else
+                  if [ "$PM" = pnpm ]; then pin="$PNPM_PIN"; else pin="$YARN_PIN"; fi
+                  echo "No packageManager declared — activating pinned $PM@$pin"
+                  corepack prepare "$PM@$pin" --activate
+                fi
+              fi
+              if [ "$PM" = pnpm ]; then
                 pnpm install --frozen-lockfile
               elif [ "$PM" = yarn ]; then
-                corepack enable
                 yarn install --immutable
               elif [ -f package-lock.json ]; then
                 npm ci
