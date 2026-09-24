@@ -47,6 +47,7 @@ from the lockfile. Override any gate when detection is wrong:
     with:
       test-cmd: ./gradlew test
       typecheck-cmd: ''        # empty string skips the gate
+      build-cmd: uv build      # python/both have no build default; set one to gate it
       enforce-amplitude: true  # default false = report only
 ```
 

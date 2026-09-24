@@ -89,6 +89,13 @@ on:
       typecheck-cmd:
         type: string
         default: ''
+      build-cmd:
+        description: >-
+          Override the detected build command. node runs its package.json
+          "build" script; python|both have no default at all — see the Build
+          step for why.
+        type: string
+        default: ''
       enforce-amplitude:
         description: 'true fails the build on an Amplitude policy violation; false reports only.'
         type: boolean
@@ -273,6 +280,32 @@ jobs:
             esac
           fi
           if [ -z "$cmd" ]; then echo "SKIP typecheck — no command detected or configured."; exit 0; fi
+          echo "+ $cmd"
+          eval "$cmd"
+
+      - name: Build
+        env:
+          STACK: ${{ steps.detect.outputs.stack }}
+          PM: ${{ steps.detect.outputs.pm }}
+          OVERRIDE: ${{ inputs.build-cmd }}
+        run: |
+          # The empty python|both arm is deliberate, not an oversight. pytest and
+          # ruff are conventions every Python repo can be held to; "build" is not.
+          # `uv build` means "produce a wheel", which is right for a published
+          # package and meaningless for an application or a service — running it
+          # by default would fail repos that ship no distribution at all.
+          # si-agent-core does run `uv build`, but as ITS packaging step, not as a
+          # portfolio norm. A Python caller that builds something passes build-cmd.
+          cmd="$OVERRIDE"
+          if [ -z "$cmd" ]; then
+            case "$STACK" in
+              python|both) : ;;
+              node)
+                if grep -q '"build"' package.json 2>/dev/null; then cmd="$PM run build"; fi
+                ;;
+            esac
+          fi
+          if [ -z "$cmd" ]; then echo "SKIP build — no command detected or configured."; exit 0; fi
           echo "+ $cmd"
           eval "$cmd"
 
